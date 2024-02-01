@@ -7,7 +7,8 @@
  * compatible open source license.
  */
 void call(Map args = [:]) {
-    String jobName = args.jobName ?: 'distribution-build-opensearch'
+//    String jobName = args.jobName ?: 'distribution-build-opensearch'
+    String jobName = 'distribution-build-opensearch'
     lib = library(identifier: 'jenkins@main', retriever: legacySCM(scm))
     def buildManifest = lib.jenkins.BuildManifest.new(readYaml(file: args.buildManifest))
     String artifactRootUrl = buildManifest.getArtifactRootUrl(jobName, args.buildId)
