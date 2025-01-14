@@ -11,6 +11,7 @@ import static org.hamcrest.MatcherAssert.assertThat
 
 class RunBenchmarkTestScriptLibTester extends LibFunctionTester{
 
+    private String command
     private String bundleManifest
     private String distributionUrl
     private String distributionVersion
@@ -35,15 +36,18 @@ class RunBenchmarkTestScriptLibTester extends LibFunctionTester{
     private String additionalConfig
     private String dataStorageSize = '200'
     private String mlStorageSize = '200'
+    private String enableInstanceStorage
     private String jvmSysProps = ''
     private String captureNodeStat
     private String captureSegmentReplicationStat
     private String telemetryParams
 
-    public RunBenchmarkTestScriptLibTester(bundleManifest, distributionUrl, distributionVersion, insecure, workload, singleNode, minDistribution, use50PercentHeap,
-                                           enableRemoteStore, managerNodeCount, dataNodeCount, dataInstanceType, userTag, workloadParams,
-                                           testProcedure, excludeTasks, includeTasks,
-                                           additionalConfig, captureNodeStat, captureSegmentReplicationStat, telemetryParams){
+    public RunBenchmarkTestScriptLibTester(command, bundleManifest, distributionUrl, distributionVersion, insecure, workload,
+                                           singleNode, minDistribution, use50PercentHeap, enableRemoteStore, managerNodeCount,
+                                           dataNodeCount, dataInstanceType, userTag, workloadParams, testProcedure, excludeTasks,
+                                           includeTasks, additionalConfig, captureNodeStat, captureSegmentReplicationStat, telemetryParams,
+                                            enableInstanceStorage){
+        this.command = command
         this.bundleManifest = bundleManifest
         this.distributionUrl = distributionUrl
         this.distributionVersion = distributionVersion
@@ -65,6 +69,7 @@ class RunBenchmarkTestScriptLibTester extends LibFunctionTester{
         this.captureNodeStat = captureNodeStat
         this.captureSegmentReplicationStat = captureSegmentReplicationStat
         this.telemetryParams = telemetryParams
+        this.enableInstanceStorage = enableInstanceStorage
     }
 
 
@@ -124,6 +129,7 @@ class RunBenchmarkTestScriptLibTester extends LibFunctionTester{
         binding.setVariable('env', ['BUILD_NUMBER': '307'])
         binding.setVariable('BUILD_NUMBER', '307')
         binding.setVariable('BUILD_URL', 'test://artifact.url')
+        binding.setVariable('COMMAND', command)
         binding.setVariable('BUNDLE_MANIFEST', bundleManifest)
         binding.setVariable('DISTRIBUTION_URL', distributionUrl)
         binding.setVariable('DISTRIBUTION_VERSION', distributionVersion)
@@ -161,5 +167,6 @@ class RunBenchmarkTestScriptLibTester extends LibFunctionTester{
         binding.setVariable('TEST_WORKLOAD', workload)
         binding.setVariable('WEBHOOK_URL', 'test://artifact.url')
         binding.setVariable('TELEMETRY_PARAMS', telemetryParams)
+        binding.setVariable('ENABLE_INSTANCE_STORAGE', enableInstanceStorage)
     }
 }

@@ -10,13 +10,15 @@
 pipeline {
     agent none
     stages {
-        stage('notify') {
+        stage('smoke-test') {
             steps {
                 script {
-                    closeBuildSuccessGithubIssue(
-                        message: ["Successfully built OpenSearch"],
-                        search: "Successfully built",
-                        inputManifestPath: 'tests/data/opensearch-2.0.0.yml'
+                    runSmokeTestScript(
+                        jobName: 'dummy_job',
+                        buildManifest: 'tests/data/opensearch-2.18.0-build.yml',
+                        testManifest: 'tests/data/opensearch-2.18.0-test.yml',
+                        buildId: '2345',
+                        switchUserNonRoot: 'true'
                     )
                 }
             }

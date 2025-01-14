@@ -21,6 +21,7 @@ class TestRunBenchmarkTestScript extends BuildPipelineTest {
     @Before
     void setUp() {
         this.registerLibTester(new RunBenchmarkTestScriptLibTester(
+                'execute-test',
                 'tests/data/opensearch-1.3.0-bundle.yml',
                 '',
                 '',
@@ -41,7 +42,8 @@ class TestRunBenchmarkTestScript extends BuildPipelineTest {
                 'cluster.indices.replication.strategy:SEGMENT',
                 'false',
                 'true',
-                ''
+                '',
+                'false'
         ))
         super.setUp()
     }
@@ -61,7 +63,7 @@ class TestRunBenchmarkTestScript extends BuildPipelineTest {
 
         assertThat(curlCommands.size(), equalTo(2))
         assertThat(curlCommands, hasItem(
-                "curl -sSL test://artifact.url --output tests/data/opensearch-1.3.0-bundle.yml".toString()
+                "curl -sSL --retry 5 test://artifact.url --output tests/data/opensearch-1.3.0-bundle.yml".toString()
         ))
 
         def s3DownloadCommands = getCommandExecutions('s3Download', 'bucket').findAll {
@@ -87,10 +89,10 @@ class TestRunBenchmarkTestScript extends BuildPipelineTest {
 
         assertThat(testScriptCommands.size(), equalTo(2))
         assertThat(testScriptCommands, hasItem(
-                "./test.sh benchmark-test --bundle-manifest tests/data/opensearch-1.3.0-bundle.yml   --config /tmp/workspace/config.yml --workload nyc_taxis --benchmark-config /tmp/workspace/benchmark.ini --user-tag distribution-build-id:1236,arch:x64,os-commit-id:22408088f002a4fc8cdd3b2ed7438866c14c5069,security-enabled:true  --single-node  --use-50-percent-heap   --capture-segment-replication-stat --suffix 307-secure      --data-instance-type r5.8xlarge --workload-params '{\"key2\":\"value2\"}'    --additional-config cluster.indices.replication.strategy:SEGMENT --data-node-storage 200 --ml-node-storage 200  ".toString()
+                "set +x && ./test.sh benchmark-test execute-test --bundle-manifest tests/data/opensearch-1.3.0-bundle.yml    --config /tmp/workspace/config.yml --workload nyc_taxis --benchmark-config /tmp/workspace/benchmark.ini --user-tag distribution-build-id:1236,arch:x64,os-commit-id:22408088f002a4fc8cdd3b2ed7438866c14c5069,security-enabled:true    --single-node  --use-50-percent-heap    --capture-segment-replication-stat --suffix 307-secure      --data-instance-type r5.8xlarge --workload-params '{\"key2\":\"value2\"}'    --additional-config cluster.indices.replication.strategy:SEGMENT --data-node-storage 200 --ml-node-storage 200"
         ))
         assertThat(testScriptCommands, hasItem(
-		        "./test.sh benchmark-test --bundle-manifest tests/data/opensearch-1.3.0-bundle.yml   --config /tmp/workspace/config.yml --workload nyc_taxis --benchmark-config /tmp/workspace/benchmark.ini --user-tag distribution-build-id:1236,arch:x64,os-commit-id:22408088f002a4fc8cdd3b2ed7438866c14c5069,security-enabled:false --without-security --single-node  --use-50-percent-heap   --capture-segment-replication-stat --suffix 307      --data-instance-type r5.8xlarge --workload-params '{\"key2\":\"value2\"}'    --additional-config cluster.indices.replication.strategy:SEGMENT --data-node-storage 200 --ml-node-storage 200  ".toString()
+                "set +x && ./test.sh benchmark-test execute-test --bundle-manifest tests/data/opensearch-1.3.0-bundle.yml    --config /tmp/workspace/config.yml --workload nyc_taxis --benchmark-config /tmp/workspace/benchmark.ini --user-tag distribution-build-id:1236,arch:x64,os-commit-id:22408088f002a4fc8cdd3b2ed7438866c14c5069,security-enabled:false --without-security   --single-node  --use-50-percent-heap    --capture-segment-replication-stat --suffix 307      --data-instance-type r5.8xlarge --workload-params '{\"key2\":\"value2\"}'    --additional-config cluster.indices.replication.strategy:SEGMENT --data-node-storage 200 --ml-node-storage 200"
         ))
     }
 

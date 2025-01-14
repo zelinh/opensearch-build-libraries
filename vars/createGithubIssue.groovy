@@ -14,6 +14,8 @@
  @param args.issueBody <required> - GitHub issue body
  @param args.label <optional> - GitHub issue label to be attached along with 'untriaged'. Defaults to autocut.
  @param args.daysToReOpen <optional> - Look for a closed Github issues older than `daysToReOpen`.
+ @param args.issueEdit <optional> - Updates the body of the issue, the default if not passed is to add a comment.
+ @param args.issueBodyFile <optional> - GitHub issue body from an `.md` file
  */
 
 void call(Map args = [:]) {
@@ -22,7 +24,7 @@ void call(Map args = [:]) {
     try {
         withCredentials([usernamePassword(credentialsId: 'jenkins-github-bot-token', passwordVariable: 'GITHUB_TOKEN', usernameVariable: 'GITHUB_USER')]) {
             def openIssue = sh(
-                    script: "gh issue list --repo ${args.repoUrl} -S \"${args.issueTitle} in:title\" --label ${label} --json number --jq '.[0].number'",
+                    script: "gh issue list --repo ${args.repoUrl} -S \"${args.issueTitle} in:title\" --json number --jq '.[0].number'",
                     returnStdout: true
             ).trim()
 
@@ -32,16 +34,26 @@ void call(Map args = [:]) {
             ).trim()
 
             def closedIssue = sh(
-                    script: "gh issue list --repo ${args.repoUrl} -S \"${args.issueTitle} in:title is:closed closed:>=${currentDayMinusDaysToReOpen}\" --label ${label} --json number --jq '.[0].number'",
+                    script: "gh issue list --repo ${args.repoUrl} -S \"${args.issueTitle} in:title is:closed closed:>=${currentDayMinusDaysToReOpen}\" --json number --jq '.[0].number'",
                     returnStdout: true
             ).trim()
 
+            def bodyOption = args.issueBodyFile ? "--body-file ${args.issueBodyFile}" : "--body \"${args.issueBody}\""
+
             if (openIssue) {
-                println('Issue already exists, adding a comment')
-                sh(
-                   script: "gh issue comment ${openIssue} --repo ${args.repoUrl} --body \"${args.issueBody}\"",
-                   returnStdout: true
-                )
+                if (args.issueEdit) {
+                    println('Issue already exists, editing the issue body')
+                    sh(
+                            script: "gh issue edit ${openIssue} --repo ${args.repoUrl} ${bodyOption}",
+                            returnStdout: true
+                    )
+                } else {
+                    println('Issue already exists, adding a comment')
+                    sh(
+                            script: "gh issue comment ${openIssue} --repo ${args.repoUrl} ${bodyOption}",
+                            returnStdout: true
+                    )
+                }
             }
             else if (!openIssue && closedIssue) {
                 println("Re-opening a recently closed issue and commenting on it")
@@ -49,15 +61,39 @@ void call(Map args = [:]) {
                    script: "gh issue reopen --repo ${args.repoUrl} ${closedIssue}",
                    returnStdout: true
                 )
-                sh(
-                   script: "gh issue comment ${closedIssue} --repo ${args.repoUrl} --body \"${args.issueBody}\"",
-                   returnStdout: true
-                )
+                // Default behavior is comment unless `issueEdit` is passed
+                if (args.issueEdit) {
+                    sh(
+                            script: "gh issue edit ${closedIssue} --repo ${args.repoUrl} ${bodyOption}",
+                            returnStdout: true
+                    )
+                } else {
+                    sh(
+                            script: "gh issue comment ${closedIssue} --repo ${args.repoUrl} ${bodyOption}",
+                            returnStdout: true
+                    )
+                }
             }
             else {
                 println("Creating new issue")
+                List<String> allLabels = Arrays.asList(label.split(','))
+                allLabels.each { i ->
+                    def labelName = sh(
+                            script: "gh label list --repo ${args.repoUrl} -S ${i} --json name --jq '.[0].name'",
+                            returnStdout: true
+                        ).trim()
+                    if (labelName.equals(i.trim())) {
+                        println("Label ${i} already exists. Skipping label creation")
+                    } else {
+                        println("${i} label is missing. Creating the missing label")
+                        sh(
+                            script: "gh label create ${i} --repo ${args.repoUrl}",
+                            returnStdout: true
+                        )
+                    }
+                }
                 sh(
-                    script: "gh issue create --title \"${args.issueTitle}\" --body \"${args.issueBody}\" --label ${label} --label \"untriaged\" --repo ${args.repoUrl}",
+                    script: "gh issue create --title \"${args.issueTitle}\" ${bodyOption} --label \"${label}\" --label \"untriaged\" --repo ${args.repoUrl}",
                     returnStdout: true
                 )
             }

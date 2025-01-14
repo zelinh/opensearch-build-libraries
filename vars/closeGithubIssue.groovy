@@ -12,14 +12,12 @@
  @param args.repoUrl <required> - GitHub repository URL to create issue
  @param args.issueTitle <required> - GitHub issue title
  @param args.closeComment <required> - GitHub issue leave a closing comment
- @param args.label <optional> - GitHub issue label to be attached along with 'untriaged'. Defaults to autocut.
  */
 void call(Map args = [:]) {
-    label = args.label ?: 'autocut'
     try {
         withCredentials([usernamePassword(credentialsId: 'jenkins-github-bot-token', passwordVariable: 'GITHUB_TOKEN', usernameVariable: 'GITHUB_USER')]) {
             def issuesNumber = sh(
-                    script: "gh issue list --repo ${args.repoUrl} -S \"${args.issueTitle} in:title\" --label ${label} --json number --jq '.[0].number'",
+                    script: "gh issue list --repo ${args.repoUrl} -S \"${args.issueTitle} in:title\" --json number --jq '.[0].number'",
                     returnStdout: true
             ).trim()
             if (!issuesNumber.isEmpty()) {

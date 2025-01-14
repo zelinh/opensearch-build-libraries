@@ -15,7 +15,8 @@ pipeline {
                 script {
                     runGradleCheck(
                         gitRepoUrl: "https://github.com/opensearch-project/OpenSearch",
-                        gitReference: "main"
+                        gitReference: "main",
+                        bwcCheckoutAlign: "false"
                     )
                 }
             }
