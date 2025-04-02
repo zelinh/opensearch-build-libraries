@@ -23,7 +23,7 @@ void call(Map args = [:]) {
 
 
     // To ensure the test TestOpenSearchIntegTest from opensearch-build repo passes.
-    def isNullOrEmpty = { str -> 
+    def isNullOrEmpty = { str ->
         str == null || (str instanceof String && str.trim().isEmpty())
     }
     // Check if any args is equals to null or it is a test run
@@ -44,7 +44,10 @@ void call(Map args = [:]) {
     def indexName = "opensearch-integration-test-results-${formattedDate}"
     def testFailuresindexName = "opensearch-integration-test-failures-${formattedDate}"
     def finalJsonDoc = ""
-    def version = manifest.version.toString()
+    // Qualifier is in-built in the version. Splitting it until https://github.com/opensearch-project/opensearch-build/issues/5386 is resolved
+    def versionTokenize = manifest.version.tokenize('-')
+    def version = versionTokenize[0]
+    def qualifier = versionTokenize[1] ?: "None"
     def distributionBuildNumber = manifest.id
     def rcNumber = manifest.rc.toInteger()
     def rc = (rcNumber > 0)
@@ -72,21 +75,21 @@ void call(Map args = [:]) {
         def withoutSecurityTestStdout = component.configs.find { it.name == 'without-security' }?.test_stdout ?: ''
         def withoutSecurityTestStderr = component.configs.find { it.name == 'without-security' }?.test_stderr ?: ''
         def withSecurityFailedTests = component.configs.find { it.name == 'with-security' }?.failed_test ?: []
-        processFailedTests(withSecurityFailedTests, componentName, componentRepo, componentRepoUrl, version, integTestBuildNumber, 
-                   integTestBuildUrl, distributionBuildNumber, distributionBuildUrl, buildStartTime, rc, rcNumber, 
+        processFailedTests(withSecurityFailedTests, componentName, componentRepo, componentRepoUrl, version, qualifier, integTestBuildNumber,
+                   integTestBuildUrl, distributionBuildNumber, distributionBuildUrl, buildStartTime, rc, rcNumber,
                    platform, architecture, distribution, componentCategory, "with-security", testFailuresindexName)
         def withoutSecurityFailedTests = component.configs.find { it.name == 'without-security' }?.failed_test ?: []
-        processFailedTests(withoutSecurityFailedTests, componentName, componentRepo, componentRepoUrl, version, integTestBuildNumber, 
-                   integTestBuildUrl, distributionBuildNumber, distributionBuildUrl, buildStartTime, rc, rcNumber, 
+        processFailedTests(withoutSecurityFailedTests, componentName, componentRepo, componentRepoUrl, version, qualifier, integTestBuildNumber,
+                   integTestBuildUrl, distributionBuildNumber, distributionBuildUrl, buildStartTime, rc, rcNumber,
                    platform, architecture, distribution, componentCategory, "without-security", testFailuresindexName)
         def jsonContent = generateJson(
-                                        componentName, componentRepo, componentRepoUrl, version, integTestBuildNumber, 
-                                        integTestBuildUrl, distributionBuildNumber, distributionBuildUrl, 
-                                        buildStartTime, rc, rcNumber, 
-                                        platform, architecture, distribution, 
-                                        componentCategory, componentResult, testReportManifestYmlUrl, 
-                                        withSecurity, withSecurityYml, withSecurityClusterStdout, 
-                                        withSecurityClusterStderr, withSecurityTestStdout, withSecurityTestStderr, 
+                                        componentName, componentRepo, componentRepoUrl, version, qualifier, integTestBuildNumber,
+                                        integTestBuildUrl, distributionBuildNumber, distributionBuildUrl,
+                                        buildStartTime, rc, rcNumber,
+                                        platform, architecture, distribution,
+                                        componentCategory, componentResult, testReportManifestYmlUrl,
+                                        withSecurity, withSecurityYml, withSecurityClusterStdout,
+                                        withSecurityClusterStderr, withSecurityTestStdout, withSecurityTestStderr,
                                         withoutSecurity, withoutSecurityYml, withoutSecurityClusterStdout, withoutSecurityClusterStderr,
                                         withoutSecurityTestStdout, withoutSecurityTestStderr
                                     )
@@ -97,8 +100,8 @@ void call(Map args = [:]) {
     indexFailedTestData(indexName, "test-records.json")
 }
 
-def processFailedTests(failedTests, componentName, componentRepo, componentRepoUrl, version, integTestBuildNumber, 
-                       integTestBuildUrl, distributionBuildNumber, distributionBuildUrl, buildStartTime, 
+def processFailedTests(failedTests, componentName, componentRepo, componentRepoUrl, version, qualifier, integTestBuildNumber,
+                       integTestBuildUrl, distributionBuildNumber, distributionBuildUrl, buildStartTime,
                        rc, rcNumber, platform, architecture, distribution, componentCategory, securityType, testFailuresindexName) {
 
     def finalFailedTestsJsonDoc = ""
@@ -106,14 +109,14 @@ def processFailedTests(failedTests, componentName, componentRepo, componentRepoU
         case failedTests.isEmpty():
             break
         case failedTests.contains("Test Result Not Available"):
-            def testResultJsonContent = generateFailedTestJson(componentName, componentRepo, componentRepoUrl, version, integTestBuildNumber, 
-                integTestBuildUrl, distributionBuildNumber, distributionBuildUrl, buildStartTime, rc, rcNumber, 
+            def testResultJsonContent = generateFailedTestJson(componentName, componentRepo, componentRepoUrl, version, qualifier, integTestBuildNumber,
+                integTestBuildUrl, distributionBuildNumber, distributionBuildUrl, buildStartTime, rc, rcNumber,
                 platform, architecture, distribution, componentCategory, securityType, "Result Not Available", "Result Not Available")
             finalFailedTestsJsonDoc += "{\"index\": {\"_index\": \"${testFailuresindexName}\"}}\n${testResultJsonContent}\n"
             break
         case failedTests.contains("Test Result Files List Not Available"):
-            def testResultJsonContent = generateFailedTestJson(componentName, componentRepo, componentRepoUrl, version, integTestBuildNumber, 
-                integTestBuildUrl, distributionBuildNumber, distributionBuildUrl, buildStartTime, rc, rcNumber, 
+            def testResultJsonContent = generateFailedTestJson(componentName, componentRepo, componentRepoUrl, version, qualifier,integTestBuildNumber,
+                integTestBuildUrl, distributionBuildNumber, distributionBuildUrl, buildStartTime, rc, rcNumber,
                 platform, architecture, distribution, componentCategory, securityType, "Report Not Available", "Report Not Available")
             finalFailedTestsJsonDoc += "{\"index\": {\"_index\": \"${testFailuresindexName}\"}}\n${testResultJsonContent}\n"
             break
@@ -123,8 +126,8 @@ def processFailedTests(failedTests, componentName, componentRepo, componentRepoU
             failedTests.collect { failedTest ->
                 def match = failedTest.split("#")
                 if (match) {
-                    def testResultJsonContent = generateFailedTestJson(componentName, componentRepo, componentRepoUrl, version, integTestBuildNumber, 
-                        integTestBuildUrl, distributionBuildNumber, distributionBuildUrl, buildStartTime, rc, rcNumber, 
+                    def testResultJsonContent = generateFailedTestJson(componentName, componentRepo, componentRepoUrl, version, qualifier, integTestBuildNumber,
+                        integTestBuildUrl, distributionBuildNumber, distributionBuildUrl, buildStartTime, rc, rcNumber,
                         platform, architecture, distribution, componentCategory, securityType, match[0].trim(), match[1].trim())
                     finalFailedTestsJsonDoc += "{\"index\": {\"_index\": \"${testFailuresindexName}\"}}\n${testResultJsonContent}\n"
                 }
@@ -168,6 +171,9 @@ void indexTestFailuresData(testFailuresindexName, testFailuresFile) {
                                     "type": "keyword"
                                 },
                                 "version": {
+                                    "type": "keyword"
+                                },
+                                "qualifier": {
                                     "type": "keyword"
                                 },
                                 "integ_test_build_number": {
@@ -283,6 +289,9 @@ void indexFailedTestData(indexName, testRecordsFile) {
                             },
                             "version": {
                                 "type": "keyword"
+                            },
+                            "qualifier": {
+                                    "type": "keyword"
                             },
                             "integ_test_build_number": {
                                 "type": "integer"
@@ -403,8 +412,8 @@ void indexFailedTestData(indexName, testRecordsFile) {
     }
 }
 
-def generateFailedTestJson(componentName, componentRepo, componentRepoUrl, version, 
-                integTestBuildNumber, integTestBuildUrl, distributionBuildNumber, distributionBuildUrl, 
+def generateFailedTestJson(componentName, componentRepo, componentRepoUrl, version, qualifier,
+                integTestBuildNumber, integTestBuildUrl, distributionBuildNumber, distributionBuildUrl,
                 buildStartTime, rc, rcNumber, platform, architecture, distribution, componentCategory,
                 testType, testClass, testName) {
     def json = [
@@ -412,6 +421,7 @@ def generateFailedTestJson(componentName, componentRepo, componentRepoUrl, versi
         component_repo: componentRepo,
         component_repo_url: componentRepoUrl,
         version: version,
+        qualifier: qualifier,
         integ_test_build_number: integTestBuildNumber,
         integ_test_build_url: integTestBuildUrl,
         distribution_build_number: distributionBuildNumber,
@@ -425,24 +435,25 @@ def generateFailedTestJson(componentName, componentRepo, componentRepoUrl, versi
         component_category: componentCategory,
         test_type: testType,
         test_class: testClass,
-        test_name: testName 
+        test_name: testName
     ]
     return JsonOutput.toJson(json)
 }
 
 
-def generateJson(componentName, componentRepo, componentRepoUrl, version, 
-                integTestBuildNumber, integTestBuildUrl, distributionBuildNumber, distributionBuildUrl, 
-                buildStartTime, rc, rcNumber, platform, architecture, distribution, componentCategory, 
-                componentResult, testReportManifestYmlUrl, withSecurity, withSecurityYml, withSecurityClusterStdout, 
-                withSecurityClusterStderr, withSecurityTestStdout,withSecurityTestStderr, withoutSecurity, 
-                withoutSecurityYml, withoutSecurityClusterStdout, withoutSecurityClusterStderr, withoutSecurityTestStdout, 
+def generateJson(componentName, componentRepo, componentRepoUrl, version, qualifier,
+                integTestBuildNumber, integTestBuildUrl, distributionBuildNumber, distributionBuildUrl,
+                buildStartTime, rc, rcNumber, platform, architecture, distribution, componentCategory,
+                componentResult, testReportManifestYmlUrl, withSecurity, withSecurityYml, withSecurityClusterStdout,
+                withSecurityClusterStderr, withSecurityTestStdout,withSecurityTestStderr, withoutSecurity,
+                withoutSecurityYml, withoutSecurityClusterStdout, withoutSecurityClusterStderr, withoutSecurityTestStdout,
                 withoutSecurityTestStderr) {
     def json = [
         component: componentName,
         component_repo: componentRepo,
         component_repo_url: componentRepoUrl,
         version: version,
+        qualifier: qualifier,
         integ_test_build_number: integTestBuildNumber,
         integ_test_build_url: integTestBuildUrl,
         distribution_build_number: distributionBuildNumber,
